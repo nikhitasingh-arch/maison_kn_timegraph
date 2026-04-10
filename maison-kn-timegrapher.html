@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Maison KN — Timegrapher</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #0a0a0a;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    color: #e8e8e8;
+  }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .brand {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+  .metrics {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .metric-card {
+    background: #141414;
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    border: 0.5px solid #222;
+  }
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: #444;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .metric-value {
+    font-size: 40px;
+    font-weight: 500;
+    color: #e8e8e8;
+    line-height: 1;
+    transition: color 0.3s;
+  }
+  .metric-unit {
+    font-size: 11px;
+    color: #333;
+    margin-top: 0.5rem;
+  }
+  .positive { color: #5dcaa5; }
+  .negative { color: #f09595; }
+  .neutral  { color: #e8e8e8; }
+  .waveform-wrap {
+    width: 100%;
+    margin-bottom: 2rem;
+    background: #0f0f0f;
+    border-radius: 8px;
+    border: 0.5px solid #1a1a1a;
+    overflow: hidden;
+  }
+  canvas#wave { width: 100%; height: 72px; display: block; }
+  .bph-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+  .bph-label { font-size: 11px; color: #444; letter-spacing: 0.12em; text-transform: uppercase; }
+  .bph-select {
+    background: #141414;
+    border: 0.5px solid #2a2a2a;
+    color: #aaa;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .btn-row { display: flex; gap: 10px; width: 100%; margin-bottom: 10px; }
+  .btn {
+    flex: 1;
+    padding: 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    color: #ffffff;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.6; }
+  .btn-start { background: #2a2a2a; }
+  .btn-reset { background: #141414; border: 0.5px solid #222; }
+  .btn-settings {
+    width: 100%;
+    background: transparent;
+    border: 0.5px solid #1e1e1e;
+    color: #333;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 11px;
+    border-radius: 10px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s;
+  }
+  .settings-panel {
+    width: 100%;
+    margin-top: 12px;
+    background: #0f0f0f;
+    border: 0.5px solid #1a1a1a;
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: none;
+  }
+  .settings-panel.open { display: block; }
+  .setting-row { margin-bottom: 1.25rem; }
+  .setting-row:last-of-type { margin-bottom: 0; }
+  .setting-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .setting-name { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: #444; }
+  .setting-val { font-size: 12px; color: #666; font-weight: 500; }
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: #2a2a2a;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #555;
+    cursor: pointer;
+  }
+  .setting-desc { font-size: 10px; color: #2a2a2a; margin-top: 8px; line-height: 1.6; }
+  .divider { width: 100%; height: 0.5px; background: #1a1a1a; margin: 1rem 0; }
+  .reset-settings {
+    font-size: 10px;
+    color: #2a2a2a;
+    text-align: center;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px;
+  }
+  .status {
+    font-size: 11px;
+    color: #2a2a2a;
+    margin-top: 1.5rem;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+  .status.active { color: #5dcaa5; }
+  .status.error  { color: #f09595; }
+  .tip {
+    font-size: 10px;
+    color: #222;
+    text-align: center;
+    margin-top: 0.75rem;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="brand">Maison KN</div>
+
+  <div class="metrics">
+    <div class="metric-card">
+      <div class="metric-label">Rate</div>
+      <div class="metric-value neutral" id="rate-val">—</div>
+      <div class="metric-unit">s / day</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Beat error</div>
+      <div class="metric-value neutral" id="be-val">—</div>
+      <div class="metric-unit">ms</div>
+    </div>
+  </div>
+
+  <div class="waveform-wrap">
+    <canvas id="wave"></canvas>
+  </div>
+
+  <div class="bph-row">
+    <span class="bph-label">BPH</span>
+    <select class="bph-select" id="bph-select">
+      <option value="18000">18,000</option>
+      <option value="19800">19,800</option>
+      <option value="21600" selected>21,600</option>
+      <option value="25200">25,200</option>
+      <option value="28800">28,800</option>
+      <option value="36000">36,000</option>
+    </select>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-start" id="btn-main" onclick="toggleMeasure()">Start</button>
+    <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+  </div>
+
+  <button class="btn-settings" id="btn-settings" onclick="toggleSettings()">Settings</button>
+
+  <div class="settings-panel" id="settings-panel">
+
+    <div class="setting-row">
+      <div class="setting-top">
+        <span class="setting-name">Threshold</span>
+        <span class="setting-val" id="lbl-threshold">0.035</span>
+      </div>
+      <input type="range" id="sl-threshold" min="0.005" max="0.15" step="0.005" value="0.035" oninput="updateSetting('threshold')">
+      <div class="setting-desc">Min loudness to register a tick. Raise if background noise causes false triggers. Lower if ticks are being missed.</div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-top">
+        <span class="setting-name">Min interval gate</span>
+        <span class="setting-val" id="lbl-gate">0.40</span>
+      </div>
+      <input type="range" id="sl-gate" min="0.2" max="0.8" step="0.05" value="0.40" oninput="updateSetting('gate')">
+      <div class="setting-desc">Fraction of beat interval that must pass before a new tick registers. Raise if you see double-triggers.</div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-top">
+        <span class="setting-name">Smoothing window</span>
+        <span class="setting-val" id="lbl-smooth">20</span>
+      </div>
+      <input type="range" id="sl-smooth" min="4" max="40" step="2" value="20" oninput="updateSetting('smooth')">
+      <div class="setting-desc">Ticks used to calculate rate. Lower = faster response. Higher = more stable.</div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-top">
+        <span class="setting-name">Peak decay</span>
+        <span class="setting-val" id="lbl-decay">0.85</span>
+      </div>
+      <input type="range" id="sl-decay" min="0.5" max="0.99" step="0.01" value="0.85" oninput="updateSetting('decay')">
+      <div class="setting-desc">How quickly the peak resets after a tick. Lower if alternating beats are being missed.</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="reset-settings" onclick="resetSettings()">Restore defaults</div>
+  </div>
+
+  <div class="status" id="status">Press start, then hold EarPods mic to crown</div>
+  <div class="tip">For best results in noisy environments,<br>press EarPods mic firmly against the crown</div>
+</div>
+
+<script>
+let audioCtx, analyser, source, stream;
+let running = false;
+let ticks = [];
+let animFrame;
+
+const defaults = { threshold: 0.035, gate: 0.40, smooth: 20, decay: 0.85 };
+let params = { ...defaults };
+
+function updateSetting(key) {
+  const ids = { threshold: 'sl-threshold', gate: 'sl-gate', smooth: 'sl-smooth', decay: 'sl-decay' };
+  const lbls = { threshold: 'lbl-threshold', gate: 'lbl-gate', smooth: 'lbl-smooth', decay: 'lbl-decay' };
+  const val = parseFloat(document.getElementById(ids[key]).value);
+  params[key] = val;
+  const lbl = document.getElementById(lbls[key]);
+  lbl.textContent = key === 'smooth' ? Math.round(val) : val.toFixed(key === 'decay' ? 2 : 3);
+}
+
+function resetSettings() {
+  params = { ...defaults };
+  document.getElementById('sl-threshold').value = defaults.threshold;
+  document.getElementById('sl-gate').value = defaults.gate;
+  document.getElementById('sl-smooth').value = defaults.smooth;
+  document.getElementById('sl-decay').value = defaults.decay;
+  document.getElementById('lbl-threshold').textContent = defaults.threshold.toFixed(3);
+  document.getElementById('lbl-gate').textContent = defaults.gate.toFixed(2);
+  document.getElementById('lbl-smooth').textContent = defaults.smooth;
+  document.getElementById('lbl-decay').textContent = defaults.decay.toFixed(2);
+}
+
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  p.classList.toggle('open');
+  document.getElementById('btn-settings').textContent = p.classList.contains('open') ? 'Hide settings' : 'Settings';
+}
+
+function getBPH() { return parseInt(document.getElementById('bph-select').value); }
+function expectedInterval() { return (3600 / getBPH()) * 1000; }
+
+async function toggleMeasure() {
+  if (running) { stopMeasure(); return; }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    running = true;
+    ticks = [];
+    document.getElementById('btn-main').textContent = 'Stop';
+    setStatus('Listening\u2026', 'active');
+    detectTicks();
+    drawWave();
+  } catch(e) {
+    setStatus('Mic access denied', 'error');
+  }
+}
+
+function stopMeasure() {
+  running = false;
+  if (source) source.disconnect();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  cancelAnimationFrame(animFrame);
+  document.getElementById('btn-main').textContent = 'Start';
+  setStatus('Stopped', '');
+}
+
+function resetAll() {
+  stopMeasure();
+  ticks = [];
+  setMetric('rate-val', '—', 'neutral');
+  setMetric('be-val', '—', 'neutral');
+  setStatus('Press start, then hold EarPods mic to crown', '');
+  const cv = document.getElementById('wave');
+  cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+}
+
+function setStatus(msg, cls) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function setMetric(id, val, cls) {
+  const el = document.getElementById(id);
+  el.textContent = val;
+  el.className = 'metric-value ' + cls;
+}
+
+let lastTickTime = 0;
+let tickBuffer = new Float32Array(2048);
+let lastPeak = 0;
+
+function detectTicks() {
+  if (!running) return;
+  analyser.getFloatTimeDomainData(tickBuffer);
+  const now = audioCtx.currentTime * 1000;
+  let peak = 0;
+  for (let i = 0; i < tickBuffer.length; i++) {
+    const abs = Math.abs(tickBuffer[i]);
+    if (abs > peak) peak = abs;
+  }
+  if (peak > params.threshold && peak > lastPeak * 0.6 && (now - lastTickTime) > (expectedInterval() * params.gate)) {
+    if (lastTickTime > 0) {
+      ticks.push(now - lastTickTime);
+      if (ticks.length > 60) ticks.shift();
+      updateMetrics();
+    }
+    lastTickTime = now;
+  }
+  lastPeak = peak * params.decay;
+  setTimeout(detectTicks, 11);
+}
+
+function updateMetrics() {
+  if (ticks.length < 4) return;
+  const expected = expectedInterval();
+  const recent = ticks.slice(-Math.round(params.smooth));
+  const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const rateSec = ((avg - expected) / expected) * 86400;
+  const rateR = Math.round(rateSec * 10) / 10;
+  setMetric('rate-val',
+    (rateR > 0 ? '+' : '') + rateR.toFixed(1),
+    Math.abs(rateR) < 5 ? 'positive' : rateR > 0 ? 'positive' : 'negative'
+  );
+
+  if (ticks.length >= 6) {
+    const pairs = [];
+    for (let i = 0; i < recent.length - 1; i += 2) {
+      if (recent[i + 1] !== undefined) pairs.push(Math.abs(recent[i] - recent[i + 1]));
+    }
+    if (pairs.length > 0) {
+      const be = pairs.reduce((a, b) => a + b, 0) / pairs.length;
+      const beR = Math.round(be * 10) / 10;
+      setMetric('be-val', beR.toFixed(1), beR < 1.0 ? 'positive' : beR < 2.5 ? 'neutral' : 'negative');
+    }
+  }
+}
+
+function drawWave() {
+  if (!running) return;
+  const cv = document.getElementById('wave');
+  const ctx = cv.getContext('2d');
+  cv.width = cv.offsetWidth * window.devicePixelRatio;
+  cv.height = cv.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  const W = cv.offsetWidth, H = cv.offsetHeight;
+  const buf = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(buf);
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = '#1e1e1e';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(0, H / 2);
+  ctx.lineTo(W, H / 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#3a3a3a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const step = W / buf.length;
+  for (let i = 0; i < buf.length; i++) {
+    const x = i * step;
+    const y = (1 - buf[i]) * H / 2;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  animFrame = requestAnimationFrame(drawWave);
+}
+</script>
+</body>
+</html>
